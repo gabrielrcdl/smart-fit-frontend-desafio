@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
+import { FilterUnitsService } from 'src/app/services/filter-units.service';
 import { GetUnitsService } from 'src/app/services/get-units.service';
 import { LocationInterface } from 'src/app/types/location.interface';
-import { UnitsInterface } from 'src/app/types/unit.interface';
 
 @Component({
   selector: 'app-forms',
@@ -10,13 +10,16 @@ import { UnitsInterface } from 'src/app/types/unit.interface';
   styleUrls: ['./forms.component.scss'],
 })
 export class FormsComponent implements OnInit {
+  @Output() submitEvent = new EventEmitter();
+
   results: LocationInterface[] = [];
   filteredResults: LocationInterface[] = [];
   form!: FormGroup;
 
   constructor(
     private formBuilder: FormBuilder,
-    private unitsService: GetUnitsService
+    private unitsService: GetUnitsService,
+    private filerUnitsService: FilterUnitsService
   ) {}
 
   ngOnInit(): void {
@@ -30,21 +33,20 @@ export class FormsComponent implements OnInit {
 
   getUnits() {
     this.unitsService.getAllUnits().subscribe((data) => {
-      this.results = data.locations;
-      this.filteredResults = data.locations;
+      this.results = data;
+      this.filteredResults = data;
     });
   }
 
   onSubmit() {
-    const showClosed = this.form.value.showClosed;
+    this.filteredResults = this.filerUnitsService.filter(
+      this.results,
+      this.form.value.showClosed,
+      this.form.value.hour
+    );
+    this.unitsService.setFilteredUnits(this.filteredResults);
 
-    if (!showClosed) {
-      this.filteredResults = this.results.filter(
-        (location) => location.opened === true
-      );
-    } else {
-      this.filteredResults = this.results;
-    }
+    this.submitEvent.emit();
   }
 
   onClear() {
